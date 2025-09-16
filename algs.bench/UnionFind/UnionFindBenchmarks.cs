@@ -1,0 +1,28 @@
+using BenchmarkDotNet.Attributes;
+
+namespace algs.bench.UnionFind;
+
+[SimpleJob(launchCount: 1, warmupCount: 0, iterationCount: 1)]
+[MemoryDiagnoser]
+public class UnionFindBenchmarks
+{
+    private QuickFindUf _uf;
+
+    [Params(10, 100, 1000)]
+    public int N { get; set; }
+
+    [GlobalSetup]
+    public void QuickFindUf()
+    {
+        _uf = new QuickFindUf(N);
+    }
+
+    [Benchmark]
+    public void Union()
+    {
+        for (var i = 0; i < N - 1; i++)
+        {
+            _uf.Union(i, i + 1);
+        }
+    }
+}
