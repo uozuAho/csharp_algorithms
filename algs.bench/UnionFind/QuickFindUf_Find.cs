@@ -4,7 +4,7 @@ namespace algs.bench.UnionFind;
 
 [SimpleJob(launchCount: 1, warmupCount: 0, iterationCount: 1)]
 [MemoryDiagnoser]
-public class UnionFindBenchmarks
+public class QuickFindUf_Find
 {
     private QuickFindUf _uf;
 
@@ -15,15 +15,16 @@ public class UnionFindBenchmarks
     public void QuickFindUf()
     {
         _uf = new QuickFindUf(N);
-    }
-
-    [Benchmark]
-    public void Union()
-    {
-        // todo: is this a good test of union?
         for (var i = 0; i < N - 1; i++)
         {
             _uf.Union(i, i + 1);
         }
+    }
+
+    [Benchmark]
+    public void Find()
+    {
+        // todo: is this a good test of find??
+        _uf.Find(N / 2);
     }
 }
