@@ -1,0 +1,5 @@
+Most code here is copied/paraphrased from https://algs4.cs.princeton.edu.
+
+I don't know how copyright works, but treat everything here as owned by the
+authors of https://algs4.cs.princeton.edu. The code here is just for my
+interest/reference.
