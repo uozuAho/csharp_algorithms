@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "algs.console", "algs.consol
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "algs.bench", "algs.bench\algs.bench.csproj", "{CDF56AB1-7FFD-4A72-85C8-F24F18BEE961}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "algs.test", "algs.test\algs.test.csproj", "{72C0C1C4-91E5-4D0B-B2B1-8FC763C003B5}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -36,5 +38,9 @@ Global
 		{CDF56AB1-7FFD-4A72-85C8-F24F18BEE961}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CDF56AB1-7FFD-4A72-85C8-F24F18BEE961}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CDF56AB1-7FFD-4A72-85C8-F24F18BEE961}.Release|Any CPU.Build.0 = Release|Any CPU
+		{72C0C1C4-91E5-4D0B-B2B1-8FC763C003B5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{72C0C1C4-91E5-4D0B-B2B1-8FC763C003B5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{72C0C1C4-91E5-4D0B-B2B1-8FC763C003B5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{72C0C1C4-91E5-4D0B-B2B1-8FC763C003B5}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

@@ -7,7 +7,7 @@ namespace algs.Trie;
 /// </summary>
 public class TrieSt<T>
 {
-    private const int BranchFactor = 256;
+    private const int ChildrenPerNode = 256;
 
     private Node? _root = null;
     private int _size = 0;
@@ -15,7 +15,7 @@ public class TrieSt<T>
     private class Node
     {
         public T? Value { get; set; }
-        public Node[] Children { get; set; } = new Node[BranchFactor];
+        public Node?[] Children { get; set; } = new Node[ChildrenPerNode];
     }
 
     public TrieSt()
@@ -41,20 +41,92 @@ public class TrieSt<T>
         }
     }
 
-    private Node Put(Node? current, string key, T value, int d)
+    public void Put(string key, T? value)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(key);
+        if (value == null) Delete(key);
+        else _root = Put(_root, key, value, 0);
+    }
+
+    private Node Put(Node? current, string key, T value, int depth)
     {
         current ??= new Node();
 
-        if (d == key.Length)
+        if (depth == key.Length)
         {
             if (current.Value == null) _size++;
             current.Value = value;
             return current;
         }
 
-        var c = key[d];
-        current.Children[c] = Put(current.Children[c], key, value, d + 1);
+        var c = key[depth];
+        current.Children[c] = Put(current.Children[c], key, value, depth + 1);
 
         return current;
+    }
+
+    public void Delete(string key)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(key);
+        _root = Delete(_root, key, 0);
+    }
+
+    private Node? Delete(Node? x, string key, int depth)
+    {
+        if (x == null) return null;
+
+        if (depth == key.Length)
+        {
+            if (x.Value != null) _size--;
+            x.Value = default;
+        }
+        else
+        {
+            var c = key[depth];
+            x.Children[c] = Delete(x.Children[c], key, depth + 1);
+        }
+
+        // remove subtrie rooted at x if it is completely empty
+        if (x.Value != null) return x;
+        for (var c = 0; c < ChildrenPerNode; c++)
+        {
+            if (x.Children[c] != null)
+                return x;
+        }
+        return null;
+    }
+
+    /**
+     * Returns the string in the symbol table that is the longest prefix of {@code query},
+     * or {@code null}, if no such string.
+     * @param query the query string
+     * @return the string in the symbol table that is the longest prefix of {@code query},
+     *     or {@code null} if no such string
+     * @throws IllegalArgumentException if {@code query} is {@code null}
+     */
+    public string? LongestPrefixOf(string query)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(query);
+        var length = LongestPrefixOf(_root, query, 0, -1);
+        return length == -1
+            ? null
+            : query[..length];
+    }
+
+    // returns the length of the longest string key in the subtrie
+    // rooted at x that is a prefix of the query string,
+    // assuming the first d character match and we have already
+    // found a prefix match of given length (-1 if no such match)
+    private static int LongestPrefixOf(Node? current, string query, int depth, int length)
+    {
+        while (true)
+        {
+            if (current == null) return length;
+            if (current.Value != null) length = depth;
+            if (depth == query.Length) return length;
+            var c = query[depth];
+            current = current.Children[c];
+            depth += 1;
+        }
     }
 }

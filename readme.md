@@ -19,3 +19,6 @@ curl https://algs4.cs.princeton.edu/15uf/tinyUF.txt | dotnet run quickfinduf
 cd algs.bench
 dotnet run -c Release quickfinduf_find
 ```
+
+# todo
+- WIP: tries https://algs4.cs.princeton.edu/52trie/
