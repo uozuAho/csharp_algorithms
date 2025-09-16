@@ -8,8 +8,14 @@ Install dotnet 8+
 
 ```sh
 dotnet build      # does it build?
+# todo: tests
 
-# run an algorithm by name, streaming in test data
+# Run an algorithm by class name, streaming in test data.
+# All algorithms have a main method that reads from stdin.
 cd algs.console
 curl https://algs4.cs.princeton.edu/15uf/tinyUF.txt | dotnet run quickfinduf
+
+# benchmark an algorithm by benchmark class name
+cd algs.bench
+dotnet run -c Release quickfinduf_find
 ```
