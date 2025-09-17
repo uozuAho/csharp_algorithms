@@ -5,29 +5,16 @@ namespace algs.test;
 
 public class ValTrieStTests
 {
-    private ValTrieSt<int> _valTrie;
-
-    [OneTimeSetUp]
-    public void Setup()
+    private static ValTrieSt<int> IntTrieWith(string[] words)
     {
-        var words = new[]
-        {
-            "shell",
-            "tortoise",
-            "shelter",
-            "shelley",
-            "quicksand",
-            "shoreline",
-            "shorty",
-            "shellshock"
-        };
-
-        _valTrie = new ValTrieSt<int>();
+        var t = new ValTrieSt<int>();
 
         for (var i = 0; i < words.Length; i++)
         {
-            _valTrie.Put(words[i], i);
+            t.Put(words[i], i);
         }
+
+        return t;
     }
 
     [Test]
@@ -51,13 +38,25 @@ public class ValTrieStTests
     [TestCase("quicksort", null)]
     public void LongestPrefixOf(string word, string prefix)
     {
-        _valTrie.LongestPrefixOf(word).ShouldBe(prefix);
+        var trie = IntTrieWith([
+            "shell",
+            "shelley",
+            "quicksand"
+        ]);
+
+        trie.LongestPrefixOf(word).ShouldBe(prefix);
     }
 
     [TestCase("shor", "shoreline,shorty")]
     public void KeysWithPrefix(string prefix, string expected)
     {
+        var trie = IntTrieWith([
+            "shoreline",
+            "shorty",
+            "babababa"
+        ]);
+
         var expectedKeys = expected.Split(",");
-        _valTrie.KeysWithPrefix(prefix).ShouldBe(expectedKeys);
+        trie.KeysWithPrefix(prefix).ShouldBe(expectedKeys);
     }
 }
