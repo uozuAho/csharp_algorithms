@@ -9,7 +9,7 @@ namespace algs.bench;
 /// </summary>
 public class MyCrappyBenchmarker
 {
-    public static void Run(Type type, int iterations = 20)
+    public static void Run(Type type)
     {
         var methods = type.GetMethods(
                 BindingFlags.Public
@@ -32,38 +32,56 @@ public class MyCrappyBenchmarker
 
         foreach (var method in methods)
         {
-            Console.WriteLine($"Benchmark: {method.Name}");
-
-            // Warmup (JIT)
-            method.Invoke(instance, null);
-
-            var times = new List<double>(iterations);
-
-            for (int i = 0; i < iterations; i++)
-            {
-                var sw = Stopwatch.StartNew();
-                method.Invoke(instance, null);
-                sw.Stop();
-
-                times.Add(sw.Elapsed.TotalMilliseconds);
-            }
-
-            PrintStats(times);
-            Console.WriteLine();
+            RunBenchmark(method, instance);
         }
     }
 
-    private static void PrintStats(List<double> times)
+    private static void RunBenchmark(MethodInfo method, object? instance)
     {
-        double avg = times.Average();
-        double min = times.Min();
-        double max = times.Max();
-        double stddev = Math.Sqrt(times.Select(t => Math.Pow(t - avg, 2)).Average());
+        var measurements = new Measurements { MethodName = method.Name };
 
-        Console.WriteLine($"  N = {times.Count}");
-        Console.WriteLine($"  Mean   = {avg:F4} ms");
-        Console.WriteLine($"  StdDev = {stddev:F4} ms");
-        Console.WriteLine($"  Min    = {min:F4} ms");
-        Console.WriteLine($"  Max    = {max:F4} ms");
+        for (var i = 0; i < 3; i++)
+        {
+            var (invocations, time) = CountInvocations(method, instance, TimeSpan.FromMilliseconds(1));
+
+            measurements.NumInvocations.Add(invocations);
+            measurements.Durations.Add(time);
+        }
+
+        Report(measurements);
+    }
+
+    private static (int, TimeSpan) CountInvocations(
+        MethodInfo method, object? instance, TimeSpan duration)
+    {
+        var invocations = 0;
+
+        var sw = Stopwatch.StartNew();
+        while (sw.Elapsed < duration)
+        {
+            method.Invoke(instance, null);
+            invocations++;
+        }
+        sw.Stop();
+
+        return (invocations, sw.Elapsed);
+    }
+
+    private class Measurements
+    {
+        public required string MethodName { get; init; }
+        public List<int> NumInvocations { get; init; } = [];
+        public List<TimeSpan> Durations { get; init; } = [];
+    }
+
+    private static void Report(Measurements measurements)
+    {
+        Console.WriteLine(measurements.MethodName);
+        for (var i = 0; i < measurements.NumInvocations.Count; i++)
+        {
+            var rate = measurements.NumInvocations[i] / measurements.Durations[i].TotalMilliseconds;
+            var perCall = measurements.Durations[i].TotalMilliseconds / measurements.NumInvocations[i];
+            Console.WriteLine($"  {rate:#.##}/ms    {perCall:##.00000}ms per call");
+        }
     }
 }
