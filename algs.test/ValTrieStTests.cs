@@ -1,0 +1,63 @@
+using algs.Trie;
+using Shouldly;
+
+namespace algs.test;
+
+public class ValTrieStTests
+{
+    private ValTrieSt<int> _valTrie;
+
+    [OneTimeSetUp]
+    public void Setup()
+    {
+        var words = new[]
+        {
+            "shell",
+            "tortoise",
+            "shelter",
+            "shelley",
+            "quicksand",
+            "shoreline",
+            "shorty",
+            "shellshock"
+        };
+
+        _valTrie = new ValTrieSt<int>();
+
+        for (var i = 0; i < words.Length; i++)
+        {
+            _valTrie.Put(words[i], i);
+        }
+    }
+
+    [Test]
+    public void DebugString()
+    {
+        var t = new ValTrieSt<int>();
+        t.Put("alf", 1);
+        t.Put("abc", 2);
+
+        t.DebugString().ShouldBe(
+            """
+            a
+              b
+                c: 2
+              l
+                f: 1
+            """ + Environment.NewLine);
+    }
+
+    [TestCase("shellsort", "shell")]
+    [TestCase("quicksort", null)]
+    public void LongestPrefixOf(string word, string prefix)
+    {
+        _valTrie.LongestPrefixOf(word).ShouldBe(prefix);
+    }
+
+    [TestCase("shor", "shoreline,shorty")]
+    public void KeysWithPrefix(string prefix, string expected)
+    {
+        var expectedKeys = expected.Split(",");
+        _valTrie.KeysWithPrefix(prefix).ShouldBe(expectedKeys);
+    }
+}

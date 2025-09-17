@@ -1,24 +1,30 @@
 // copied from https://algs4.cs.princeton.edu/52trie/TrieST.java.html
 
+using System.Text;
+
 namespace algs.Trie;
 
 /// <summary>
-/// Trie symbol table
+/// Trie symbol table, for value types. I have to constraint T to either
+/// a struct/class otherwise T? doesn't work properly in Node. Eg. if I
+/// don't constrain T, then T? Value = default = 0 (instead of null)
+/// when T = int. Dunno why.
 /// </summary>
-public class TrieSt<T>
+public class ValTrieSt<T> where T : struct
 {
     private const int ChildrenPerNode = 256;
 
-    private Node? _root = null;
-    private int _size = 0;
+    private Node? _root;
+    private int _size;
 
     private class Node
     {
         public T? Value { get; set; }
+
         public Node?[] Children { get; set; } = new Node[ChildrenPerNode];
     }
 
-    public TrieSt()
+    public ValTrieSt()
     {
     }
 
@@ -26,7 +32,7 @@ public class TrieSt<T>
     {
         ArgumentException.ThrowIfNullOrEmpty(key);
         var x = Get(_root, key, 0);
-        return x == null ? default : x.Value;
+        return x?.Value;
     }
 
     private static Node? Get(Node? x, string key, int d)
@@ -41,6 +47,9 @@ public class TrieSt<T>
         }
     }
 
+    /// <summary>
+    /// Put null = delete
+    /// </summary>
     public void Put(string key, T? value)
     {
         ArgumentException.ThrowIfNullOrEmpty(key);
@@ -48,7 +57,7 @@ public class TrieSt<T>
         else _root = Put(_root, key, value, 0);
     }
 
-    private Node Put(Node? current, string key, T value, int depth)
+    private Node Put(Node? current, string key, T? value, int depth)
     {
         current ??= new Node();
 
@@ -65,6 +74,28 @@ public class TrieSt<T>
         return current;
     }
 
+    public IEnumerable<string> Keys() => KeysWithPrefix("");
+
+    public IEnumerable<string> KeysWithPrefix(string prefix)
+    {
+        var results = new Queue<string>();
+        var x = Get(_root, prefix, 0);
+        Collect(x, new StringBuilder(prefix), results);
+        return results;
+    }
+
+    private void Collect(Node? x, StringBuilder prefix, Queue<string> results)
+    {
+        if (x == null) return;
+        if (x.Value != null) results.Enqueue(prefix.ToString());
+        for (var c = 0; c < ChildrenPerNode; c++)
+        {
+            prefix.Append((char)c);
+            Collect(x.Children[c], prefix, results);
+            prefix.Remove(prefix.Length - 1, 1);
+        }
+    }
+
     public void Delete(string key)
     {
         ArgumentException.ThrowIfNullOrEmpty(key);
@@ -78,7 +109,7 @@ public class TrieSt<T>
         if (depth == key.Length)
         {
             if (x.Value != null) _size--;
-            x.Value = default;
+            x.Value = null;
         }
         else
         {
@@ -127,6 +158,31 @@ public class TrieSt<T>
             var c = query[depth];
             current = current.Children[c];
             depth += 1;
+        }
+    }
+
+    public string DebugString()
+    {
+        var sb = new StringBuilder();
+        DebugStringRec(_root, sb, 0);
+        return sb.ToString();
+    }
+
+    private void DebugStringRec(Node? x, StringBuilder sb, int indent)
+    {
+        if (x == null) return;
+        for (var c = 0; c < ChildrenPerNode; c++)
+        {
+            var child = x.Children[c];
+            if (child != null)
+            {
+                sb.Append(' ', indent);
+                sb.Append((char)c);
+                if (child.Value != null)
+                    sb.Append(": ").Append(child.Value);
+                sb.AppendLine();
+                DebugStringRec(child, sb, indent + 2);
+            }
         }
     }
 }
