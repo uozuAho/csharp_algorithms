@@ -105,12 +105,14 @@ public static class MyCrappyBenchmarker
 
         var numInvocations = new List<int>();
         var durations = new List<TimeSpan>();
+        var allocatedBytes = new List<long>();
 
         while (true)
         {
-            var (invocations, time) = CountInvocations(method, instance, TimeSpan.FromMilliseconds(1));
+            var (invocations, time, allocated) = RunForTime(method, instance, TimeSpan.FromMilliseconds(1));
             numInvocations.Add(invocations);
             durations.Add(time);
+            allocatedBytes.Add(allocated);
 
             if (durations.Count >= numMeasurements)
             {
@@ -133,34 +135,40 @@ public static class MyCrappyBenchmarker
         {
             MethodName = method.Name,
             NumInvocations = numInvocations.TakeLast(numMeasurements).ToImmutableList(),
-            Durations = durations.TakeLast(numMeasurements).ToImmutableList()
+            Durations = durations.TakeLast(numMeasurements).ToImmutableList(),
+            AllocatedBytes = allocatedBytes.TakeLast(numMeasurements).ToImmutableList(),
         };
 
         return measurements;
     }
 
-    private static (int, TimeSpan) CountInvocations(
-        MethodInfo method, object? instance, TimeSpan duration)
+    private static (int invocations, TimeSpan actualDuration, long totalBytesAllocated)
+        RunForTime(MethodInfo method, object? instance, TimeSpan duration)
     {
         var invocations = 0;
+        var totalBytesAllocated = 0L;
 
         var sw = Stopwatch.StartNew();
         while (sw.Elapsed < duration)
         {
+            var before = GC.GetAllocatedBytesForCurrentThread();
             method.Invoke(instance, null);
+            var after = GC.GetAllocatedBytesForCurrentThread();
+            totalBytesAllocated += after - before;
             invocations++;
         }
         sw.Stop();
 
-        return (invocations, sw.Elapsed);
+        return (invocations, sw.Elapsed, totalBytesAllocated);
     }
 
     private record Measurements
     {
         public required string MethodName { get; init; }
+        public ImmutableDictionary<string, string> Parameters { get; init; } = ImmutableDictionary<string, string>.Empty;
         public ImmutableList<int> NumInvocations { get; init; } = [];
         public ImmutableList<TimeSpan> Durations { get; init;  } = [];
-        public ImmutableDictionary<string, string> Parameters { get; init; } = ImmutableDictionary<string, string>.Empty;
+        public ImmutableList<long> AllocatedBytes { get; init; } = [];
     }
 
     private static void Report(List<Measurements> measurements)
@@ -179,6 +187,7 @@ public static class MyCrappyBenchmarker
         foreach (var name in paramNames)
             Console.Write($"{name,15}");
         Console.Write($"{' ',15}per call");
+        Console.Write($"{' ',15}allocated");
         Console.WriteLine();
 
         foreach (var m in measurements)
@@ -188,12 +197,18 @@ public static class MyCrappyBenchmarker
                 m.Parameters.TryGetValue(name, out var value);
                 Console.Write($"{value,15}");
             }
+
             var totalInvocations = m.NumInvocations.Sum();
             var totalDuration = m.Durations.Aggregate(TimeSpan.Zero, (acc, x) => acc + x);
             var avgRatePerMs = totalInvocations / totalDuration.TotalMilliseconds;
             var perCallStr = FormatPeriod(1000 * avgRatePerMs);
             Console.Write($"{' ',15}{perCallStr}");
-            Console.WriteLine();
+
+            var allocatedPerCall = (long)m.AllocatedBytes
+                .Zip(m.NumInvocations)
+                .Select(x => x.First / x.Second)
+                .Average();
+            Console.WriteLine($"{' ',15}{FormatBytes(allocatedPerCall)}");
         }
     }
 
@@ -205,5 +220,23 @@ public static class MyCrappyBenchmarker
             < 1_000_000 => $"{1_000_000 / freqHz:F2}µs",
             _ => $"{1_000_000_000 / freqHz:F2}ns"
         };
+    }
+
+    private static string FormatBytes(long bytes)
+    {
+        string[] sizes = ["B", "KB", "MB", "GB"];
+        double len = bytes;
+        var order = 0;
+
+        while (len >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            len /= 1024;
+        }
+
+        // Show 1 decimal place for larger values, but no decimals for bytes
+        return order == 0
+            ? $"{len:0} {sizes[order]}"
+            : $"{len:0.##} {sizes[order]}";
     }
 }
