@@ -76,12 +76,31 @@ public class MyCrappyBenchmarker
 
     private static void Report(Measurements measurements)
     {
-        Console.WriteLine(measurements.MethodName);
+        Console.WriteLine($"Benchmark: {measurements.MethodName}");
+        Console.WriteLine($"    {"Rate (/ms)",-14} {"Per Call",-15}");
         for (var i = 0; i < measurements.NumInvocations.Count; i++)
         {
             var rate = measurements.NumInvocations[i] / measurements.Durations[i].TotalMilliseconds;
-            var perCall = measurements.Durations[i].TotalMilliseconds / measurements.NumInvocations[i];
-            Console.WriteLine($"  {rate:#.##}/ms    {perCall:##.00000}ms per call");
+            var perCall = TimePerCall(measurements, i);
+            var perCallStr = FormatTime(perCall);
+            Console.WriteLine($"  {rate,12:#.##} {perCallStr,15}");
         }
+    }
+
+    private static string FormatTime(TimeSpan ts)
+    {
+        if (ts.TotalMilliseconds >= 1)
+            return $"{ts.TotalMilliseconds:F2}ms";
+        if (ts.TotalMicroseconds >= 1)
+            return $"{ts.TotalMicroseconds:F2}µs";
+        return $"{ts.TotalNanoseconds:F2}ns";
+    }
+
+    private static TimeSpan TimePerCall(Measurements measurements, int i)
+    {
+        var duration = measurements.Durations[i];
+        var invocations = measurements.NumInvocations[i];
+        var perCall = duration / invocations;
+        return perCall;
     }
 }
