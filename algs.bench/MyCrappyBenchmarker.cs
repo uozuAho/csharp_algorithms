@@ -33,19 +33,64 @@ public static class MyCrappyBenchmarker
         {
             foreach (var params_ in ParameterCombinations(type))
             {
-                var instance = Create(type, params_);
-                var measurements = RunBenchmark(method, instance);
-                measurements = measurements with
-                {
-                    Parameters = params_.ToImmutableDictionary(
-                        x => x.Key.Name,
-                        x => $"{x.Value}")
-                };
+                var measurements = RunBenchmark(type, params_, method);
                 allMeasurements.Add(measurements);
             }
         }
 
         Report(allMeasurements);
+    }
+
+    private static Measurements RunBenchmark(
+        Type type,
+        Dictionary<PropertyInfo, object> params_,
+        MethodInfo method
+        )
+    {
+        var instance = Create(type, params_);
+        const int numMeasurements = 5;
+        // run until last N measured rates are within this factor of each other
+        const double steadyFactor = 1.5;
+        const int abortAfter = 30;
+
+        var numInvocations = new List<int>();
+        var durations = new List<TimeSpan>();
+        var allocatedBytes = new List<long>();
+
+        while (true)
+        {
+            var (invocations, time, allocated) = RunForTime(method, instance, TimeSpan.FromMilliseconds(1));
+            numInvocations.Add(invocations);
+            durations.Add(time);
+            allocatedBytes.Add(allocated);
+
+            if (durations.Count >= numMeasurements)
+            {
+                var rates = numInvocations
+                    .Zip(durations)
+                    .Select(x => x.First / x.Second.TotalMicroseconds)
+                    .TakeLast(numMeasurements)
+                    .ToList();
+                if (rates.Max() / Math.Max(rates.Min(), 0.0001) <= steadyFactor)
+                    break;
+            }
+
+            if (durations.Count > abortAfter)
+            {
+                throw new Exception($"Run time for '{method.Name}' did not stabilise after {abortAfter} runs.");
+            }
+        }
+
+        return new Measurements
+        {
+            MethodName = method.Name,
+            Parameters = params_.ToImmutableDictionary(
+                x => x.Key.Name,
+                x => $"{x.Value}"),
+            NumInvocations = numInvocations.TakeLast(numMeasurements).ToImmutableList(),
+            Durations = durations.TakeLast(numMeasurements).ToImmutableList(),
+            AllocatedBytes = allocatedBytes.TakeLast(numMeasurements).ToImmutableList(),
+        };
     }
 
     private static object? Create(Type type, Dictionary<PropertyInfo, object> paramValues)
@@ -94,52 +139,6 @@ public static class MyCrappyBenchmarker
         }
 
         return result;
-    }
-
-    private static Measurements RunBenchmark(MethodInfo method, object? instance)
-    {
-        const int numMeasurements = 5;
-        // run until last N measured rates are within this factor of each other
-        const double steadyFactor = 1.5;
-        const int abortAfter = 30;
-
-        var numInvocations = new List<int>();
-        var durations = new List<TimeSpan>();
-        var allocatedBytes = new List<long>();
-
-        while (true)
-        {
-            var (invocations, time, allocated) = RunForTime(method, instance, TimeSpan.FromMilliseconds(1));
-            numInvocations.Add(invocations);
-            durations.Add(time);
-            allocatedBytes.Add(allocated);
-
-            if (durations.Count >= numMeasurements)
-            {
-                var rates = numInvocations
-                    .Zip(durations)
-                    .Select(x => x.First / x.Second.TotalMicroseconds)
-                    .TakeLast(numMeasurements)
-                    .ToList();
-                if (rates.Max() / Math.Max(rates.Min(), 0.0001) <= steadyFactor)
-                    break;
-            }
-
-            if (durations.Count > abortAfter)
-            {
-                throw new Exception($"Run time for '{method.Name}' did not stabilise after {abortAfter} runs.");
-            }
-        }
-
-        var measurements = new Measurements
-        {
-            MethodName = method.Name,
-            NumInvocations = numInvocations.TakeLast(numMeasurements).ToImmutableList(),
-            Durations = durations.TakeLast(numMeasurements).ToImmutableList(),
-            AllocatedBytes = allocatedBytes.TakeLast(numMeasurements).ToImmutableList(),
-        };
-
-        return measurements;
     }
 
     private static (int invocations, TimeSpan actualDuration, long totalBytesAllocated)

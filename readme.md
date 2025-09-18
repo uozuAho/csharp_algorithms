@@ -7,17 +7,17 @@ owned by them. This project is just for my interest/reference.
 Install dotnet 8+
 
 ```sh
-dotnet build      # does it build?
-# todo: tests
+dotnet test   # build & run tests
 
 # Run an algorithm by class name, streaming in test data.
 # All algorithms have a main method that reads from stdin.
 cd algs.console
 curl https://algs4.cs.princeton.edu/15uf/tinyUF.txt | dotnet run quickfinduf
 
-# benchmark an algorithm by benchmark class name
+# benchmarks
 cd algs.bench
-dotnet run -c Release quickfinduf_find
+dotnet run quickfinduf_find                      # run fast approx benchmarks
+dotnet run -c Release quickfinduf_find --bnet    # run using benchmarkdotnet
 ```
 
 # todo
