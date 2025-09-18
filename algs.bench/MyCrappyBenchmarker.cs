@@ -186,8 +186,8 @@ public static class MyCrappyBenchmarker
 
         foreach (var name in paramNames)
             Console.Write($"{name,15}");
-        Console.Write($"{' ',15}per call");
-        Console.Write($"{' ',15}allocated");
+        Console.Write($"{"per call",15}");
+        Console.Write($"{"allocated",15}");
         Console.WriteLine();
 
         foreach (var m in measurements)
@@ -202,13 +202,13 @@ public static class MyCrappyBenchmarker
             var totalDuration = m.Durations.Aggregate(TimeSpan.Zero, (acc, x) => acc + x);
             var avgRatePerMs = totalInvocations / totalDuration.TotalMilliseconds;
             var perCallStr = FormatPeriod(1000 * avgRatePerMs);
-            Console.Write($"{' ',15}{perCallStr}");
+            Console.Write($"{perCallStr,15}");
 
             var allocatedPerCall = (long)m.AllocatedBytes
                 .Zip(m.NumInvocations)
                 .Select(x => x.First / x.Second)
                 .Average();
-            Console.WriteLine($"{' ',15}{FormatBytes(allocatedPerCall)}");
+            Console.WriteLine($"{FormatBytes(allocatedPerCall),15}");
         }
     }
 
