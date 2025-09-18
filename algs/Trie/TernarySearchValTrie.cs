@@ -31,4 +31,9 @@ public class TernarySearchValTrie<T> : IValTrieSt<T> where T : struct
     {
         throw new NotImplementedException();
     }
+
+    public string DebugString()
+    {
+        throw new NotImplementedException();
+    }
 }

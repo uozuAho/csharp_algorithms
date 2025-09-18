@@ -3,34 +3,32 @@ using Shouldly;
 
 namespace algs.test;
 
-[TestFixture("A")]
+[TestFixture("valtrie")]
+[TestFixture("tst")]
 public class ValTrieStTests
 {
-    public ValTrieStTests()
-    {
+    private readonly string _trieType;
+    private IValTrieSt<int> _trie;
 
+    public ValTrieStTests(string trieType)
+    {
+        _trieType = trieType;
+        _trie = CreateNewTrie(trieType);
     }
 
-    private static ValTrieSt<int> IntTrieWith(string[] words)
+    [SetUp]
+    public void Setup()
     {
-        var t = new ValTrieSt<int>();
-
-        for (var i = 0; i < words.Length; i++)
-        {
-            t.Put(words[i], i);
-        }
-
-        return t;
+        _trie = CreateNewTrie(_trieType);
     }
 
     [Test]
     public void DebugString()
     {
-        var t = new ValTrieSt<int>();
-        t.Put("alf", 1);
-        t.Put("abc", 2);
+        _trie.Put("alf", 1);
+        _trie.Put("abc", 2);
 
-        t.DebugString().ShouldBe(
+        _trie.DebugString().ShouldBe(
             """
             a
               b
@@ -44,25 +42,43 @@ public class ValTrieStTests
     [TestCase("quicksort", null)]
     public void LongestPrefixOf(string word, string prefix)
     {
-        var trie = IntTrieWith([
+        AddWords([
             "shell",
             "shelley",
             "quicksand"
         ]);
 
-        trie.LongestPrefixOf(word).ShouldBe(prefix);
+        _trie.LongestPrefixOf(word).ShouldBe(prefix);
     }
 
     [TestCase("shor", "shoreline,shorty")]
     public void KeysWithPrefix(string prefix, string expected)
     {
-        var trie = IntTrieWith([
+        AddWords([
             "shoreline",
             "shorty",
             "babababa"
         ]);
 
         var expectedKeys = expected.Split(",");
-        trie.KeysWithPrefix(prefix).ShouldBe(expectedKeys);
+        _trie.KeysWithPrefix(prefix).ShouldBe(expectedKeys);
+    }
+
+    private static IValTrieSt<int> CreateNewTrie(string type)
+    {
+        return type switch
+        {
+            "valtrie" => new ValTrieSt<int>(),
+            "tst" => new TernarySearchValTrie<int>(),
+            _ => throw new ArgumentOutOfRangeException(nameof(type), type, null)
+        };
+    }
+
+    private void AddWords(string[] words)
+    {
+        for (var i = 0; i < words.Length; i++)
+        {
+            _trie.Put(words[i], i);
+        }
     }
 }

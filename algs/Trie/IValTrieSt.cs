@@ -15,4 +15,5 @@ public interface IValTrieSt<T> where T : struct
     IEnumerable<string> Keys();
     IEnumerable<string> KeysWithPrefix(string prefix);
     string? LongestPrefixOf(string query);
+    string DebugString();
 }
