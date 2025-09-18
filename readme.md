@@ -17,7 +17,7 @@ curl https://algs4.cs.princeton.edu/15uf/tinyUF.txt | dotnet run quickfinduf
 # benchmarks
 cd algs.bench
 dotnet run quickfinduf_find                      # run fast approx benchmarks
-dotnet run -c Release quickfinduf_find --bnet    # run using benchmarkdotnet
+dotnet run -c Release quickfinduf_find --bnet    # run accurate benchmarks using benchmarkdotnet
 ```
 
 # todo
