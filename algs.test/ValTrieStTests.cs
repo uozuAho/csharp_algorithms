@@ -3,8 +3,14 @@ using Shouldly;
 
 namespace algs.test;
 
+[TestFixture("A")]
 public class ValTrieStTests
 {
+    public ValTrieStTests()
+    {
+
+    }
+
     private static ValTrieSt<int> IntTrieWith(string[] words)
     {
         var t = new ValTrieSt<int>();

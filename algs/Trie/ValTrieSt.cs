@@ -4,13 +4,7 @@ using System.Text;
 
 namespace algs.Trie;
 
-/// <summary>
-/// Trie symbol table, for value types. I have to constraint T to either
-/// a struct/class otherwise T? doesn't work properly in Node. Eg. if I
-/// don't constrain T, then T? Value = default = 0 (instead of null)
-/// when T = int. Dunno why.
-/// </summary>
-public class ValTrieSt<T> where T : struct
+public class ValTrieSt<T> : IValTrieSt<T> where T : struct
 {
     private const int ChildrenPerNode = 256;
 
@@ -47,14 +41,10 @@ public class ValTrieSt<T> where T : struct
         }
     }
 
-    /// <summary>
-    /// Put null = delete
-    /// </summary>
-    public void Put(string key, T? value)
+    public void Put(string key, T value)
     {
         ArgumentException.ThrowIfNullOrEmpty(key);
-        if (value == null) Delete(key);
-        else _root = Put(_root, key, value, 0);
+        _root = Put(_root, key, value, 0);
     }
 
     private Node Put(Node? current, string key, T? value, int depth)
