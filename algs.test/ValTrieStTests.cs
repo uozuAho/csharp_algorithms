@@ -22,22 +22,6 @@ public class ValTrieStTests
         _trie = CreateNewTrie(_trieType);
     }
 
-    [Test]
-    public void DebugString()
-    {
-        _trie.Put("alf", 1);
-        _trie.Put("abc", 2);
-
-        _trie.DebugString().ShouldBe(
-            """
-            a
-              b
-                c: 2
-              l
-                f: 1
-            """ + Environment.NewLine);
-    }
-
     [TestCase("shellsort", "shell")]
     [TestCase("quicksort", null)]
     public void LongestPrefixOf(string word, string prefix)

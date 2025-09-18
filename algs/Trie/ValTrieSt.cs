@@ -18,10 +18,6 @@ public class ValTrieSt<T> : IValTrieSt<T> where T : struct
         public Node?[] Children { get; set; } = new Node[ChildrenPerNode];
     }
 
-    public ValTrieSt()
-    {
-    }
-
     public T? Get(string key)
     {
         ArgumentException.ThrowIfNullOrEmpty(key);
