@@ -18,22 +18,26 @@ public class Program
                 """);
         }
 
-        var benchmarkName = args.SingleOrDefault(x => x != "--help" && x != "--bnet");
-        if (benchmarkName == null)
+        var benchmarkNames = args.Where(x => x != "--help" && x != "--bnet").ToList();
+        if (benchmarkNames.Count == 0)
         {
             Console.WriteLine("Please specify a benchmark name.");
             return;
         }
-        var benchClass = BenchFinder.FindBenchmarks(benchmarkName);
-        if (benchClass == null)
-        {
-            Console.WriteLine($"Could not find benchmark {benchmarkName}");
-            return;
-        }
 
-        if (args.Contains("--bnet"))
-            BenchmarkRunner.Run(benchClass);
-        else
-            MyCrappyBenchmarker.Run(benchClass);
+        foreach (var benchmarkName in benchmarkNames)
+        {
+            var benchClass = BenchFinder.FindBenchmarks(benchmarkName);
+            if (benchClass == null)
+            {
+                Console.WriteLine($"Could not find benchmark {benchmarkNames}");
+                return;
+            }
+
+            if (args.Contains("--bnet"))
+                BenchmarkRunner.Run(benchClass);
+            else
+                MyCrappyBenchmarker.Run(benchClass);
+        }
     }
 }
