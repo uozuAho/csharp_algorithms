@@ -98,10 +98,10 @@ public static class MyCrappyBenchmarker
 
     private static Measurements RunBenchmark(MethodInfo method, object? instance)
     {
-        const int numMeasurements = 3;
+        const int numMeasurements = 5;
         // run until last N measured rates are within this factor of each other
-        const double steadyFactor = 1.3;
-        const int abortAfter = 10;
+        const double steadyFactor = 1.5;
+        const int abortAfter = 30;
 
         var numInvocations = new List<int>();
         var durations = new List<TimeSpan>();

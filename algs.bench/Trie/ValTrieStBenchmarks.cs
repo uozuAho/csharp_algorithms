@@ -8,7 +8,7 @@ namespace algs.bench.Trie;
 [MemoryDiagnoser]
 public class ValTrieStBenchmarks
 {
-    [Params(10, 20, 40)]
+    [Params(10, 20, 40, 80, 160, 320)]
     public int N { get; set; }
 
     [Benchmark]
