@@ -94,19 +94,43 @@ public class MyCrappyBenchmarker
 
     private static Measurements RunBenchmark(MethodInfo method, object? instance)
     {
-        var measurements = new Measurements { MethodName = method.Name };
+        const int numMeasurements = 3;
+        // run until last N measured rates are within this factor of each other
+        const double steadyFactor = 1.3;
+        const int abortAfter = 10;
 
-        for (var i = 0; i < 3; i++)
+        var numInvocations = new List<int>();
+        var durations = new List<TimeSpan>();
+
+        while (true)
         {
-            // todo: support methods that run for longer than 1 ms
             var (invocations, time) = CountInvocations(method, instance, TimeSpan.FromMilliseconds(1));
+            numInvocations.Add(invocations);
+            durations.Add(time);
 
-            measurements = measurements with
+            if (durations.Count >= numMeasurements)
             {
-                NumInvocations = measurements.NumInvocations.Add(invocations),
-                Durations = measurements.Durations.Add(time)
-            };
+                var rates = numInvocations
+                    .Zip(durations)
+                    .Select(x => x.First / x.Second.TotalMicroseconds)
+                    .TakeLast(numMeasurements)
+                    .ToList();
+                if (rates.Max() / Math.Max(rates.Min(), 0.0001) <= steadyFactor)
+                    break;
+            }
+
+            if (durations.Count > abortAfter)
+            {
+                throw new Exception($"Run time for '{method.Name}' did not stabilise after {abortAfter} runs.");
+            }
         }
+
+        var measurements = new Measurements
+        {
+            MethodName = method.Name,
+            NumInvocations = numInvocations.TakeLast(numMeasurements).ToImmutableList(),
+            Durations = durations.TakeLast(numMeasurements).ToImmutableList()
+        };
 
         return measurements;
     }
