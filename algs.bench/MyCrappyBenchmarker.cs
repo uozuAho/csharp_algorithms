@@ -27,6 +27,8 @@ public class MyCrappyBenchmarker
 
         Console.WriteLine($"Running benchmarks for {type.Name}\n");
 
+        var allMeasurements = new List<Measurements>();
+
         foreach (var method in methods)
         {
             foreach (var params_ in ParameterCombinations(type))
@@ -39,9 +41,12 @@ public class MyCrappyBenchmarker
                         x => x.Key.Name,
                         x => $"{x.Value}")
                 };
-                Report(measurements);
+                allMeasurements.Add(measurements);
+                // Report2(measurements);
             }
         }
+
+        Report3(allMeasurements);
     }
 
     private static object? Create(Type type, Dictionary<PropertyInfo, object> paramValues)
@@ -177,6 +182,59 @@ public class MyCrappyBenchmarker
         }
     }
 
+    private static void Report2(Measurements measurements)
+    {
+        Console.WriteLine($"Benchmark: {measurements.MethodName}");
+        Console.WriteLine("Parameters:");
+        foreach (var kvp in measurements.Parameters)
+        {
+            Console.WriteLine($"  {kvp.Key}: {kvp.Value}");
+        }
+        var avgRatePerMs = measurements.NumInvocations.Sum()
+                           / measurements.Durations.Sum(x => x.TotalMilliseconds);
+
+        Console.WriteLine($"{avgRatePerMs} calls per ms");
+        Console.WriteLine($"{FormatPeriod(1000 * avgRatePerMs)} per call");
+    }
+
+    private static void Report3(List<Measurements> measurements)
+    {
+        if (measurements.Count == 0) throw new ArgumentException("gimme", nameof(measurements));
+        if (measurements.Any(x => x.MethodName != measurements[0].MethodName))
+            throw new ArgumentException("All measurements should be for the same method", nameof(measurements));
+
+        Console.WriteLine($"Benchmark: {measurements[0].MethodName}");
+
+        // Get all unique parameter names
+        var paramNames = measurements
+            .SelectMany(x => x.Parameters.Keys)
+            .Distinct()
+            .ToList();
+
+        // Print header
+        foreach (var name in paramNames)
+            Console.Write($"{name,15}");
+        Console.Write($"{' ',15}per call");
+        Console.WriteLine();
+
+        // Print each row
+        foreach (var m in measurements)
+        {
+            foreach (var name in paramNames)
+            {
+                m.Parameters.TryGetValue(name, out var value);
+                Console.Write($"{value,15}");
+            }
+            // Calculate per call as in Report2
+            var totalInvocations = m.NumInvocations.Sum();
+            var totalDuration = m.Durations.Aggregate(TimeSpan.Zero, (acc, x) => acc + x);
+            var avgRatePerMs = totalInvocations / totalDuration.TotalMilliseconds;
+            var perCallStr = FormatPeriod(1000 * avgRatePerMs);
+            Console.Write($"{' ',15}{perCallStr}");
+            Console.WriteLine();
+        }
+    }
+
     private static string FormatTime(TimeSpan ts)
     {
         if (ts.TotalMilliseconds >= 1)
@@ -184,6 +242,16 @@ public class MyCrappyBenchmarker
         if (ts.TotalMicroseconds >= 1)
             return $"{ts.TotalMicroseconds:F2}µs";
         return $"{ts.TotalNanoseconds:F2}ns";
+    }
+
+    private static string FormatPeriod(double freqHz)
+    {
+        return freqHz switch
+        {
+            < 1000 => $"{1000 / freqHz:F2}ms",
+            < 1_000_000 => $"{1_000_000 / freqHz:F2}µs",
+            _ => $"{1_000_000_000 / freqHz:F2}ns"
+        };
     }
 
     // TODO: use something with more resolution than timespan. double nanoseconds?
