@@ -31,8 +31,6 @@ public static class MyCrappyBenchmarker
                         | BindingFlags.Static)
             .SingleOrDefault(m => m.GetCustomAttribute<GlobalSetupAttribute>() != null);
 
-        Console.WriteLine($"Running benchmarks for {type.Name}\n");
-
         var allMeasurements = new List<Measurements>();
 
         foreach (var method in methodsToBenchmark)
@@ -47,15 +45,17 @@ public static class MyCrappyBenchmarker
         Report(allMeasurements);
     }
 
-    private static Measurements RunBenchmark(Type type,
+    private static Measurements RunBenchmark(
+        Type type,
         Dictionary<PropertyInfo, object> params_,
         MethodInfo methodToBench,
-        MethodInfo? globalSetup)
+        MethodInfo? globalSetup
+    )
     {
         const int numMeasurements = 5;
         // run until last N measured rates are within this factor of each other
-        const double steadyFactor = 1.5;
-        const int abortAfter = 30;
+        const double steadyFactor = 1.6;
+        const int abortAfter = 40;
 
         var numInvocations = new List<int>();
         var durations = new List<TimeSpan>();
@@ -94,7 +94,7 @@ public static class MyCrappyBenchmarker
 
         return new Measurements
         {
-            MethodName = methodToBench.Name,
+            Name = $"{type.Name}.{methodToBench.Name}",
             Parameters = params_.ToImmutableDictionary(
                 x => x.Key.Name,
                 x => $"{x.Value}"),
@@ -174,7 +174,7 @@ public static class MyCrappyBenchmarker
 
     private record Measurements
     {
-        public required string MethodName { get; init; }
+        public required string Name { get; init; }
         public ImmutableDictionary<string, string> Parameters { get; init; } = ImmutableDictionary<string, string>.Empty;
         public ImmutableList<int> NumInvocations { get; init; } = [];
         public ImmutableList<TimeSpan> Durations { get; init;  } = [];
@@ -184,10 +184,10 @@ public static class MyCrappyBenchmarker
     private static void Report(List<Measurements> measurements)
     {
         if (measurements.Count == 0) throw new ArgumentException("gimme", nameof(measurements));
-        if (measurements.Any(x => x.MethodName != measurements[0].MethodName))
+        if (measurements.Any(x => x.Name != measurements[0].Name))
             throw new ArgumentException("All measurements should be for the same method", nameof(measurements));
 
-        Console.WriteLine($"Benchmark: {measurements[0].MethodName}");
+        Console.WriteLine($"Benchmark: {measurements[0].Name}");
 
         var paramNames = measurements
             .SelectMany(x => x.Parameters.Keys)

@@ -18,6 +18,7 @@ public class Program
                 """);
         }
 
+        var useBenchDotNet = args.Contains("--bnet");
         var benchmarkNames = args.Where(x => x != "--help" && x != "--bnet").ToList();
         if (benchmarkNames.Count == 0)
         {
@@ -27,17 +28,22 @@ public class Program
 
         foreach (var benchmarkName in benchmarkNames)
         {
-            var benchClass = BenchFinder.FindBenchmarks(benchmarkName);
-            if (benchClass == null)
-            {
-                Console.WriteLine($"Could not find benchmark {benchmarkNames}");
-                return;
-            }
-
-            if (args.Contains("--bnet"))
-                BenchmarkRunner.Run(benchClass);
-            else
-                MyCrappyBenchmarker.Run(benchClass);
+            RunBenchmarks(benchmarkName, useBenchDotNet);
         }
+    }
+
+    private static void RunBenchmarks(string benchmarkName, bool useBenchDotNet)
+    {
+        var benchClass = BenchFinder.FindBenchmarks(benchmarkName);
+        if (benchClass == null)
+        {
+            Console.WriteLine($"Could not find benchmark {benchmarkName}");
+            return;
+        }
+
+        if (useBenchDotNet)
+            BenchmarkRunner.Run(benchClass);
+        else
+            MyCrappyBenchmarker.Run(benchClass);
     }
 }
