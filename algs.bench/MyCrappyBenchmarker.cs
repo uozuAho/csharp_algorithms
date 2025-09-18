@@ -12,28 +12,34 @@ public static class MyCrappyBenchmarker
 {
     public static void Run(Type type)
     {
-        var methods = type.GetMethods(
+        var methodsToBenchmark = type.GetMethods(
                 BindingFlags.Public
                 | BindingFlags.Instance
                 | BindingFlags.Static)
             .Where(m => m.GetCustomAttribute<BenchmarkAttribute>() != null)
             .ToList();
 
-        if (methods.Count == 0)
+        if (methodsToBenchmark.Count == 0)
         {
             Console.WriteLine($"No [Benchmark] methods found in {type.Name}");
             return;
         }
 
+        var globalSetup = type
+            .GetMethods(BindingFlags.Public
+                        | BindingFlags.Instance
+                        | BindingFlags.Static)
+            .SingleOrDefault(m => m.GetCustomAttribute<GlobalSetupAttribute>() != null);
+
         Console.WriteLine($"Running benchmarks for {type.Name}\n");
 
         var allMeasurements = new List<Measurements>();
 
-        foreach (var method in methods)
+        foreach (var method in methodsToBenchmark)
         {
             foreach (var params_ in ParameterCombinations(type))
             {
-                var measurements = RunBenchmark(type, params_, method);
+                var measurements = RunBenchmark(type, params_, method, globalSetup);
                 allMeasurements.Add(measurements);
             }
         }
@@ -41,13 +47,11 @@ public static class MyCrappyBenchmarker
         Report(allMeasurements);
     }
 
-    private static Measurements RunBenchmark(
-        Type type,
+    private static Measurements RunBenchmark(Type type,
         Dictionary<PropertyInfo, object> params_,
-        MethodInfo method
-        )
+        MethodInfo methodToBench,
+        MethodInfo? globalSetup)
     {
-        var instance = Create(type, params_);
         const int numMeasurements = 5;
         // run until last N measured rates are within this factor of each other
         const double steadyFactor = 1.5;
@@ -57,9 +61,16 @@ public static class MyCrappyBenchmarker
         var durations = new List<TimeSpan>();
         var allocatedBytes = new List<long>();
 
+        var instance = Create(type, params_);
+        if (globalSetup != null)
+        {
+            globalSetup.Invoke(instance, null);
+        }
+
         while (true)
         {
-            var (invocations, time, allocated) = RunForTime(method, instance, TimeSpan.FromMilliseconds(1));
+            var (invocations, time, allocated) = RunForTime(
+                methodToBench, instance, TimeSpan.FromMilliseconds(1));
             numInvocations.Add(invocations);
             durations.Add(time);
             allocatedBytes.Add(allocated);
@@ -77,13 +88,13 @@ public static class MyCrappyBenchmarker
 
             if (durations.Count > abortAfter)
             {
-                throw new Exception($"Run time for '{method.Name}' did not stabilise after {abortAfter} runs.");
+                throw new Exception($"Run time for '{methodToBench.Name}' did not stabilise after {abortAfter} runs.");
             }
         }
 
         return new Measurements
         {
-            MethodName = method.Name,
+            MethodName = methodToBench.Name,
             Parameters = params_.ToImmutableDictionary(
                 x => x.Key.Name,
                 x => $"{x.Value}"),
