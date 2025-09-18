@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Reflection;
 using BenchmarkDotNet.Attributes;
@@ -18,37 +19,96 @@ public class MyCrappyBenchmarker
             .Where(m => m.GetCustomAttribute<BenchmarkAttribute>() != null)
             .ToList();
 
-        if (!methods.Any())
+        if (methods.Count == 0)
         {
             Console.WriteLine($"No [Benchmark] methods found in {type.Name}");
             return;
         }
 
-        object? instance = null;
-        if (!methods.All(m => m.IsStatic))
-            instance = Activator.CreateInstance(type);
-
         Console.WriteLine($"Running benchmarks for {type.Name}\n");
 
         foreach (var method in methods)
         {
-            RunBenchmark(method, instance);
+            foreach (var params_ in ParameterCombinations(type))
+            {
+                var instance = Create(type, params_);
+                var measurements = RunBenchmark(method, instance);
+                measurements = measurements with
+                {
+                    Parameters = params_.ToImmutableDictionary(
+                        x => x.Key.Name,
+                        x => $"{x.Value}")
+                };
+                Report(measurements);
+            }
         }
     }
 
-    private static void RunBenchmark(MethodInfo method, object? instance)
+    private static object? Create(Type type, Dictionary<PropertyInfo, object> paramValues)
+    {
+        var instance = Activator.CreateInstance(type);
+
+        foreach (var kvp in paramValues)
+        {
+            kvp.Key.SetValue(instance, kvp.Value);
+        }
+
+        return instance;
+    }
+
+    private static IEnumerable<Dictionary<PropertyInfo, object>> ParameterCombinations(Type type)
+    {
+        var parameters = ReadParams(type);
+        var props = parameters.Keys.ToList();
+
+        var combinations = props.Aggregate(
+            Seed(),
+            (acc, prop) =>
+                from combo in acc
+                from val in parameters[prop]
+                select new Dictionary<PropertyInfo, object>(combo) { [prop] = val });
+
+        return combinations;
+
+        IEnumerable<Dictionary<PropertyInfo, object>> Seed()
+        {
+            yield return new Dictionary<PropertyInfo, object>();
+        }
+    }
+
+    private static Dictionary<PropertyInfo, object?[]> ReadParams(Type type)
+    {
+        var result = new Dictionary<PropertyInfo, object?[]>();
+
+        foreach (var prop in type.GetProperties(BindingFlags.Public | BindingFlags.Instance))
+        {
+            var attr = prop.GetCustomAttribute<ParamsAttribute>();
+            if (attr != null)
+            {
+                result[prop] = attr.Values;
+            }
+        }
+
+        return result;
+    }
+
+    private static Measurements RunBenchmark(MethodInfo method, object? instance)
     {
         var measurements = new Measurements { MethodName = method.Name };
 
         for (var i = 0; i < 3; i++)
         {
+            // todo: support methods that run for longer than 1 ms
             var (invocations, time) = CountInvocations(method, instance, TimeSpan.FromMilliseconds(1));
 
-            measurements.NumInvocations.Add(invocations);
-            measurements.Durations.Add(time);
+            measurements = measurements with
+            {
+                NumInvocations = measurements.NumInvocations.Add(invocations),
+                Durations = measurements.Durations.Add(time)
+            };
         }
 
-        Report(measurements);
+        return measurements;
     }
 
     private static (int, TimeSpan) CountInvocations(
@@ -67,11 +127,12 @@ public class MyCrappyBenchmarker
         return (invocations, sw.Elapsed);
     }
 
-    private class Measurements
+    private record Measurements
     {
         public required string MethodName { get; init; }
-        public List<int> NumInvocations { get; init; } = [];
-        public List<TimeSpan> Durations { get; init; } = [];
+        public ImmutableList<int> NumInvocations { get; init; } = [];
+        public ImmutableList<TimeSpan> Durations { get; init;  } = [];
+        public ImmutableDictionary<string, string> Parameters { get; init; } = ImmutableDictionary<string, string>.Empty;
     }
 
     private static void Report(Measurements measurements)
@@ -96,6 +157,7 @@ public class MyCrappyBenchmarker
         return $"{ts.TotalNanoseconds:F2}ns";
     }
 
+    // TODO: use something with more resolution than timespan. double nanoseconds?
     private static TimeSpan TimePerCall(Measurements measurements, int i)
     {
         var duration = measurements.Durations[i];
