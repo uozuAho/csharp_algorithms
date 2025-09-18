@@ -6,7 +6,7 @@ namespace algs.bench.UnionFind;
 [MemoryDiagnoser]
 public class UnionFindBenchmarks
 {
-    private QuickFindUf _uf;
+    private QuickFindUf _uf = new(1);
 
     [Params(10, 100, 1000)]
     public int N { get; set; }
