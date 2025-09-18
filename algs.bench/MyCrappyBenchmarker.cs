@@ -138,6 +138,11 @@ public class MyCrappyBenchmarker
     private static void Report(Measurements measurements)
     {
         Console.WriteLine($"Benchmark: {measurements.MethodName}");
+        Console.WriteLine("Parameters:");
+        foreach (var kvp in measurements.Parameters)
+        {
+            Console.WriteLine($"  {kvp.Key}: {kvp.Value}");
+        }
         Console.WriteLine($"    {"Rate (/ms)",-14} {"Per Call",-15}");
         for (var i = 0; i < measurements.NumInvocations.Count; i++)
         {
