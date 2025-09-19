@@ -8,14 +8,40 @@ namespace algs.bench.Trie;
 [MemoryDiagnoser]
 public class TernarySearchValTrieBenchmarks
 {
+    [Params(10)]
+    public int StringLen { get; set; }
+
+    [Params("random", "sorted asc", "sorted desc")]
+    public string StringOrder { get; set; } = "";
+
     [Params(10, 20, 40, 80, 160, 320)]
-    public int N { get; set; }
+    public int NumStrings { get; set; }
+
+    private string[] _randomStrings = [];
+    private string[] _randomStringsSorted = [];
+    private string[] _randomStringsSortedReversed = [];
+
+    [GlobalSetup]
+    public void Setup()
+    {
+        _randomStrings = RandomStrings(NumStrings, StringLen).ToArray();
+        _randomStringsSorted = _randomStrings.OrderBy(x => x).ToArray();
+        _randomStringsSortedReversed = _randomStrings.OrderByDescending(x => x).ToArray();
+    }
 
     [Benchmark]
     public void Build()
     {
+        var strings = StringOrder switch
+        {
+            "random" => _randomStrings,
+            "sorted asc" => _randomStringsSorted,
+            "sorted desc" => _randomStringsSortedReversed,
+            _ => throw new ArgumentOutOfRangeException()
+        };
+
         var t = new TernarySearchValTrie<int>();
-        foreach (var str in RandomStrings(N, 10))
+        foreach (var str in strings)
         {
             t.Put(str, 1);
         }

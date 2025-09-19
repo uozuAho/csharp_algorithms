@@ -11,11 +11,19 @@ public class ValTrieStBenchmarks
     [Params(10, 20, 40, 80, 160, 320)]
     public int N { get; set; }
 
+    private string[] _randomStrings = [];
+
+    [GlobalSetup]
+    public void Setup()
+    {
+        _randomStrings = RandomStrings(N, 10).ToArray();
+    }
+
     [Benchmark]
     public void Build()
     {
         var t = new ValTrieSt<int>();
-        foreach (var str in RandomStrings(N, 10))
+        foreach (var str in _randomStrings)
         {
             t.Put(str, 1);
         }
