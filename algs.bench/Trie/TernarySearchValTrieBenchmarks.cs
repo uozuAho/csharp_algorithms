@@ -14,7 +14,7 @@ public class TernarySearchValTrieBenchmarks
     [Params("random", "sorted asc", "sorted desc")]
     public string StringOrder { get; set; } = "";
 
-    [Params(10, 20, 40, 80, 160, 320)]
+    [Params(20, 40, 80, 160, 320)]
     public int NumStrings { get; set; }
 
     private string[] _randomStrings = [];
@@ -44,6 +44,25 @@ public class TernarySearchValTrieBenchmarks
         foreach (var str in strings)
         {
             t.Put(str, 1);
+        }
+    }
+
+    // Just for comparison
+    [Benchmark]
+    public void BuildStringDict()
+    {
+        var strings = StringOrder switch
+        {
+            "random" => _randomStrings,
+            "sorted asc" => _randomStringsSorted,
+            "sorted desc" => _randomStringsSortedReversed,
+            _ => throw new ArgumentOutOfRangeException()
+        };
+
+        var dict = new Dictionary<string, int>();
+        foreach (var str in strings)
+        {
+            dict[str] = 1;
         }
     }
 
