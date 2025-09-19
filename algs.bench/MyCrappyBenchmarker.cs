@@ -31,23 +31,24 @@ public static class MyCrappyBenchmarker
                         | BindingFlags.Static)
             .SingleOrDefault(m => m.GetCustomAttribute<GlobalSetupAttribute>() != null);
 
-        var allMeasurements = new List<Measurements>();
-
         foreach (var method in methodsToBenchmark)
         {
-            foreach (var params_ in ParameterCombinations(type))
+            var allMeasurements = new List<SingleConfigMeasurements>();
+
+            foreach (var paramValues in ParameterCombinations(type))
             {
-                var measurements = RunBenchmark(type, params_, method, globalSetup);
+                var measurements = RunBenchmark(type, paramValues, method, globalSetup);
                 allMeasurements.Add(measurements);
             }
-        }
 
-        Report(allMeasurements);
+            var mb = MethodBenchmarks.From(type, method.Name, allMeasurements);
+            Report(mb);
+        }
     }
 
-    private static Measurements RunBenchmark(
+    private static SingleConfigMeasurements RunBenchmark(
         Type type,
-        Dictionary<PropertyInfo, object> params_,
+        Dictionary<PropertyInfo, object> paramValues,
         MethodInfo methodToBench,
         MethodInfo? globalSetup
     )
@@ -61,7 +62,7 @@ public static class MyCrappyBenchmarker
         var durations = new List<TimeSpan>();
         var allocatedBytes = new List<long>();
 
-        var instance = Create(type, params_);
+        var instance = Create(type, paramValues);
         if (globalSetup != null)
         {
             globalSetup.Invoke(instance, null);
@@ -92,10 +93,9 @@ public static class MyCrappyBenchmarker
             }
         }
 
-        return new Measurements
+        return new SingleConfigMeasurements
         {
-            Name = $"{type.Name}.{methodToBench.Name}",
-            Parameters = params_.ToImmutableDictionary(
+            ParameterValues = paramValues.ToImmutableDictionary(
                 x => x.Key.Name,
                 x => $"{x.Value}"),
             NumInvocations = numInvocations.TakeLast(numMeasurements).ToImmutableList(),
@@ -172,39 +172,64 @@ public static class MyCrappyBenchmarker
         return (invocations, sw.Elapsed, totalBytesAllocated);
     }
 
-    private record Measurements
+    private record MethodBenchmarks
     {
-        public required string Name { get; init; }
-        public ImmutableDictionary<string, string> Parameters { get; init; } = ImmutableDictionary<string, string>.Empty;
+        public required Type BenchmarksType { get; init; }
+        public required string MethodName { get; init; }
+        public ImmutableList<string> ParameterNames { get; private init; } = [];
+        public ImmutableList<SingleConfigMeasurements> Measurements { get; private init; } = [];
+
+        public static MethodBenchmarks From(
+            Type benchmarksType,
+            string methodName,
+            List<SingleConfigMeasurements> measurements
+        )
+        {
+            var paramNames = benchmarksType.GetProperties()
+                .Where(x => x.GetCustomAttribute<ParamsAttribute>() != null)
+                .Select(x => x.Name)
+                .ToImmutableList();
+
+            return new MethodBenchmarks()
+            {
+                BenchmarksType = benchmarksType,
+                MethodName = methodName,
+                ParameterNames = paramNames,
+                Measurements = measurements.ToImmutableList(),
+            };
+        }
+    }
+
+    /// <summary>
+    /// Measurements for the given set of parameters. Bad name :(
+    /// </summary>
+    private record SingleConfigMeasurements
+    {
+        public ImmutableDictionary<string, string> ParameterValues { get; init; } =
+            ImmutableDictionary<string, string>.Empty;
         public ImmutableList<int> NumInvocations { get; init; } = [];
         public ImmutableList<TimeSpan> Durations { get; init;  } = [];
         public ImmutableList<long> AllocatedBytes { get; init; } = [];
     }
 
-    private static void Report(List<Measurements> measurements)
+    private static void Report(MethodBenchmarks benchmarks)
     {
-        if (measurements.Count == 0) throw new ArgumentException("gimme", nameof(measurements));
-        if (measurements.Any(x => x.Name != measurements[0].Name))
-            throw new ArgumentException("All measurements should be for the same method", nameof(measurements));
+        if (benchmarks.Measurements.Count == 0)
+            throw new ArgumentException("gimme", nameof(benchmarks));
 
-        Console.WriteLine($"Benchmark: {measurements[0].Name}");
+        Console.WriteLine($"Benchmark: {benchmarks.BenchmarksType.Name}.{benchmarks.MethodName}");
 
-        var paramNames = measurements
-            .SelectMany(x => x.Parameters.Keys)
-            .Distinct()
-            .ToList();
-
-        foreach (var name in paramNames)
+        foreach (var name in benchmarks.ParameterNames)
             Console.Write($"{name,15}");
         Console.Write($"{"per call",15}");
         Console.Write($"{"allocated",15}");
         Console.WriteLine();
 
-        foreach (var m in measurements)
+        foreach (var m in benchmarks.Measurements)
         {
-            foreach (var name in paramNames)
+            foreach (var name in benchmarks.ParameterNames)
             {
-                m.Parameters.TryGetValue(name, out var value);
+                var value = m.ParameterValues[name];
                 Console.Write($"{value,15}");
             }
 
